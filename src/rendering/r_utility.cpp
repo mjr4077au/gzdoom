@@ -65,6 +65,7 @@
 #include "g_game.h"
 #include "i_system.h"
 #include "v_draw.h"
+#include "g_cvars.h"
 
 // EXTERNAL DATA DECLARATIONS ----------------------------------------------
 
@@ -92,6 +93,7 @@ static FRandom pr_torchflicker ("TorchFlicker");
 static FRandom pr_hom;
 bool NoInterpolateView;	// GL needs access to this.
 static TArray<DVector3a> InterpolationPath;
+static double lastCheck;
 
 // PUBLIC DATA DEFINITIONS -------------------------------------------------
 
@@ -514,7 +516,7 @@ void R_InterpolateView (FRenderViewpoint &viewpoint, player_t *player, double Fr
 		viewpoint.Path[0] = viewpoint.Path[1] = iview->New.Pos;
 	}
 	if (player != NULL &&
-		!(player->cheats & CF_INTERPVIEW) &&
+		(!(player->cheats & CF_INTERPVIEW) || (player->cheats & CF_INTERPVIEW) && cl_nointerpactorangles) &&
 		player - players == consoleplayer &&
 		viewpoint.camera == player->mo &&
 		!demoplayback &&
@@ -746,6 +748,48 @@ static double QuakePower(double factor, double intensity, double offset)
 
 //==========================================================================
 //
+// R_ProcessTicrateScaledInput
+//
+//==========================================================================
+
+static void R_ProcessTicrateScaledAngles(AActor *actor)
+{
+	// Set up scale factor.
+	double now = I_msTimeF();
+	double elapsedInputTicks = lastCheck > 0 ? min(now - lastCheck, 1000.0 / GameTicRate) : 1;
+	lastCheck = now;
+	double scale = elapsedInputTicks * GameTicRate / 1000.0;
+
+	// Scale angles.
+	if (cl_nointerpactorangles)
+	{
+		auto processAngle = [&](auto& current, auto& target, auto& delta)
+		{
+			// Adjust angle if required.
+			if (delta != 0)
+			{
+				current = (current + (delta * scale)).Normalized180();
+
+				// Check we haven't exceeded our bounds.
+				if ((delta > 0 && current > target) || (delta < 0 && current < target))
+				{
+					current = target;
+					target = delta = 0.;
+				}
+			}
+		};
+
+		processAngle(actor->Angles.Yaw, actor->AnglesTarget.Yaw, actor->AnglesDelta.Yaw);
+		processAngle(actor->Angles.Pitch, actor->AnglesTarget.Pitch, actor->AnglesDelta.Pitch);
+		processAngle(actor->Angles.Roll, actor->AnglesTarget.Roll, actor->AnglesDelta.Roll);
+		processAngle(actor->ViewAngles.Yaw, actor->ViewAnglesTarget.Yaw, actor->ViewAnglesDelta.Yaw);
+		processAngle(actor->ViewAngles.Pitch, actor->ViewAnglesTarget.Pitch, actor->ViewAnglesDelta.Pitch);
+		processAngle(actor->ViewAngles.Roll, actor->ViewAnglesTarget.Roll, actor->ViewAnglesDelta.Roll);
+	}
+}
+
+//==========================================================================
+//
 // R_SetupFrame
 //
 //==========================================================================
@@ -780,6 +824,8 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 	{
 		I_Error ("You lost your body. Bad dehacked work is likely to blame.");
 	}
+
+	R_ProcessTicrateScaledAngles(viewpoint.camera);
 
 	iview = FindPastViewer (viewpoint.camera);
 
