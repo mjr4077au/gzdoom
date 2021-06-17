@@ -3403,6 +3403,10 @@ static inline void P_ProcessAngleChange(player_t* player, DAngle& angle, DAngle&
 			angle = target = change;
 		}
 	}
+	else
+	{
+		angle = change;
+	}
 }
 
 void AActor::SetPitch(DAngle p, int fflags)
