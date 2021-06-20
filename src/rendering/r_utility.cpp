@@ -65,6 +65,7 @@
 #include "g_game.h"
 #include "i_system.h"
 #include "v_draw.h"
+#include "g_cvars.h"
 
 // EXTERNAL DATA DECLARATIONS ----------------------------------------------
 
@@ -746,6 +747,41 @@ static double QuakePower(double factor, double intensity, double offset)
 
 //==========================================================================
 //
+// R_DoActorTickerAngleChanges
+//
+//==========================================================================
+
+static void R_DoActorTickerAngleChanges(AActor *actor, double const scale)
+{
+	if (!cl_forceangleinterp)
+	{
+		auto processAngle = [&](auto& current, auto& target, auto& delta)
+		{
+			// Adjust angle if required.
+			if (delta != 0)
+			{
+				current = (current + (delta * scale)).Normalized180();
+
+				// Check we haven't exceeded our bounds.
+				if ((delta > 0 && current > target) || (delta < 0 && current < target))
+				{
+					current = target;
+					target = delta = 0.;
+				}
+			}
+		};
+
+		processAngle(actor->Angles.Yaw, actor->AnglesTarget.Yaw, actor->AnglesDelta.Yaw);
+		processAngle(actor->Angles.Pitch, actor->AnglesTarget.Pitch, actor->AnglesDelta.Pitch);
+		processAngle(actor->Angles.Roll, actor->AnglesTarget.Roll, actor->AnglesDelta.Roll);
+		processAngle(actor->ViewAngles.Yaw, actor->ViewAnglesTarget.Yaw, actor->ViewAnglesDelta.Yaw);
+		processAngle(actor->ViewAngles.Pitch, actor->ViewAnglesTarget.Pitch, actor->ViewAnglesDelta.Pitch);
+		processAngle(actor->ViewAngles.Roll, actor->ViewAnglesTarget.Roll, actor->ViewAnglesDelta.Roll);
+	}
+}
+
+//==========================================================================
+//
 // R_SetupFrame
 //
 //==========================================================================
@@ -780,6 +816,8 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 	{
 		I_Error ("You lost your body. Bad dehacked work is likely to blame.");
 	}
+
+	R_DoActorTickerAngleChanges(viewpoint.camera, I_GetInputScale());
 
 	iview = FindPastViewer (viewpoint.camera);
 
