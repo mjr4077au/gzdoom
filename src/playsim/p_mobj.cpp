@@ -3381,13 +3381,14 @@ DAngle AActor::ClampPitch(DAngle p)
 	return p;
 }
 
-static inline void P_ProcessAngleChange(player_t* player, DAngle& angle, DAngle& target, DAngle& delta, DAngle const change, int const fflags)
+static inline void P_ProcessAngleChange(player_t* player, AActor* actor, DAngle& angle, DAngle& target, DAngle& delta, DAngle const change, int const fflags)
 {
 	if (player != nullptr)
 	{
+		bool const interpolate = !P_NoInterpolation(player, actor);
 		if (fflags & SPF_INTERPOLATE)
 		{
-			if (cl_forceangleinterp)
+			if (interpolate || (!interpolate && cl_forceangleinterp))
 			{
 				angle = change;
 				player->cheats |= CF_INTERPVIEW;
@@ -3416,17 +3417,17 @@ void AActor::SetPitch(DAngle p, int fflags)
 		p = ClampPitch(p);
 	}
 
-	P_ProcessAngleChange(player, Angles.Pitch, AnglesTarget.Pitch, AnglesDelta.Pitch, p, fflags);
+	P_ProcessAngleChange(player, this, Angles.Pitch, AnglesTarget.Pitch, AnglesDelta.Pitch, p, fflags);
 }
 
 void AActor::SetAngle(DAngle ang, int fflags)
 {
-	P_ProcessAngleChange(player, Angles.Yaw, AnglesTarget.Yaw, AnglesDelta.Yaw, ang, fflags);
+	P_ProcessAngleChange(player, this, Angles.Yaw, AnglesTarget.Yaw, AnglesDelta.Yaw, ang, fflags);
 }
 
 void AActor::SetRoll(DAngle r, int fflags)
 {
-	P_ProcessAngleChange(player, Angles.Roll, AnglesTarget.Roll, AnglesDelta.Roll, r, fflags);
+	P_ProcessAngleChange(player, this, Angles.Roll, AnglesTarget.Roll, AnglesDelta.Roll, r, fflags);
 }
 
 void AActor::SetViewPitch(DAngle p, int fflags)
@@ -3436,17 +3437,17 @@ void AActor::SetViewPitch(DAngle p, int fflags)
 		p = ClampPitch(p);
 	}
 
-	P_ProcessAngleChange(player, ViewAngles.Pitch, ViewAnglesTarget.Pitch, ViewAnglesDelta.Pitch, p, fflags);
+	P_ProcessAngleChange(player, this, ViewAngles.Pitch, ViewAnglesTarget.Pitch, ViewAnglesDelta.Pitch, p, fflags);
 }
 
 void AActor::SetViewAngle(DAngle ang, int fflags)
 {
-	P_ProcessAngleChange(player, ViewAngles.Yaw, ViewAnglesTarget.Yaw, ViewAnglesDelta.Yaw, ang, fflags);
+	P_ProcessAngleChange(player, this, ViewAngles.Yaw, ViewAnglesTarget.Yaw, ViewAnglesDelta.Yaw, ang, fflags);
 }
 
 void AActor::SetViewRoll(DAngle r, int fflags)
 {
-	P_ProcessAngleChange(player, ViewAngles.Roll, ViewAnglesTarget.Roll, ViewAnglesDelta.Roll, r, fflags);
+	P_ProcessAngleChange(player, this, ViewAngles.Roll, ViewAnglesTarget.Roll, ViewAnglesDelta.Roll, r, fflags);
 }
 
 PClassActor *AActor::GetBloodType(int type) const

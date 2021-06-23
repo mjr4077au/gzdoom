@@ -420,12 +420,34 @@ void R_Shutdown ()
 
 //==========================================================================
 //
-// R_InterpolateView
+// P_NoInterpolation
 //
 //==========================================================================
 
 //CVAR (Int, tf, 0, 0)
 EXTERN_CVAR (Bool, cl_noprediction)
+
+bool P_NoInterpolation(player_t const *player, AActor const *actor)
+{
+	return player != NULL &&
+		!(player->cheats & CF_INTERPVIEW) &&
+		player - players == consoleplayer &&
+		actor == player->mo &&
+		!demoplayback &&
+		!(player->cheats & (CF_TOTALLYFROZEN|CF_FROZEN)) &&
+		player->playerstate == PST_LIVE &&
+		player->mo->reactiontime == 0 &&
+		!NoInterpolateView &&
+		!paused &&
+		(!netgame || !cl_noprediction) &&
+		!LocalKeyboardTurner;
+}
+
+//==========================================================================
+//
+// R_InterpolateView
+//
+//==========================================================================
 
 void R_InterpolateView (FRenderViewpoint &viewpoint, player_t *player, double Frac, InterpolationViewer *iview)
 {
@@ -514,20 +536,9 @@ void R_InterpolateView (FRenderViewpoint &viewpoint, player_t *player, double Fr
 		viewpoint.Pos = iview->New.Pos;
 		viewpoint.Path[0] = viewpoint.Path[1] = iview->New.Pos;
 	}
-	if (player != NULL &&
-		!(player->cheats & CF_INTERPVIEW) &&
-		player - players == consoleplayer &&
-		viewpoint.camera == player->mo &&
-		!demoplayback &&
+	if (P_NoInterpolation(player, viewpoint.camera) &&
 		iview->New.Pos.X == viewpoint.camera->X() &&
-		iview->New.Pos.Y == viewpoint.camera->Y() && 
-		!(player->cheats & (CF_TOTALLYFROZEN|CF_FROZEN)) &&
-		player->playerstate == PST_LIVE &&
-		player->mo->reactiontime == 0 &&
-		!NoInterpolateView &&
-		!paused &&
-		(!netgame || !cl_noprediction) &&
-		!LocalKeyboardTurner)
+		iview->New.Pos.Y == viewpoint.camera->Y())
 	{
 		viewpoint.Angles.Yaw = (nviewangle + AngleToFloat(LocalViewAngle & 0xFFFF0000)).Normalized180();
 		DAngle delta = player->centering ? DAngle(0.) : AngleToFloat(int(LocalViewPitch & 0xFFFF0000));
@@ -751,9 +762,9 @@ static double QuakePower(double factor, double intensity, double offset)
 //
 //==========================================================================
 
-static void R_DoActorTickerAngleChanges(AActor *actor, double const scale)
+static void R_DoActorTickerAngleChanges(player_t *player, AActor *actor, double const scale)
 {
-	if (!cl_forceangleinterp)
+	if (P_NoInterpolation(player, actor) && !cl_forceangleinterp)
 	{
 		auto processAngle = [&](auto& current, auto& target, auto& delta)
 		{
@@ -817,7 +828,7 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 		I_Error ("You lost your body. Bad dehacked work is likely to blame.");
 	}
 
-	R_DoActorTickerAngleChanges(viewpoint.camera, I_GetInputScale());
+	R_DoActorTickerAngleChanges(player, viewpoint.camera, I_GetInputScale());
 
 	iview = FindPastViewer (viewpoint.camera);
 
