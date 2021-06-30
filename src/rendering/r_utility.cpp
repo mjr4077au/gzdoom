@@ -766,10 +766,20 @@ static void R_DoActorTickerAngleChanges(player_t *player, AActor *actor, double 
 {
 	if (P_NoInterpolation(player, actor) && !cl_forceangleinterp)
 	{
-		auto processAngle = [&](auto& current, auto& target, auto& delta)
+		auto processAngle = [&](auto& current, auto& target, auto& delta, auto const cancel)
 		{
+			auto resetTarget = [&]()
+			{
+				target = AngleToFloat(1);
+				delta = 0.;
+			};
+
 			// Adjust angle if required.
-			if (delta != 0)
+			if (cancel)
+			{
+				resetTarget();
+			}
+			else if (delta != 0)
 			{
 				current = (current + (delta * scale)).Normalized180();
 
@@ -777,18 +787,17 @@ static void R_DoActorTickerAngleChanges(player_t *player, AActor *actor, double 
 				if ((delta > 0 && current > target) || (delta < 0 && current < target))
 				{
 					current = target;
-					target = AngleToFloat(1);
-					delta = 0.;
+					resetTarget();
 				}
 			}
 		};
 
-		processAngle(actor->Angles.Yaw, actor->AnglesTarget.Yaw, actor->AnglesDelta.Yaw);
-		processAngle(actor->Angles.Pitch, actor->AnglesTarget.Pitch, actor->AnglesDelta.Pitch);
-		processAngle(actor->Angles.Roll, actor->AnglesTarget.Roll, actor->AnglesDelta.Roll);
-		processAngle(actor->ViewAngles.Yaw, actor->ViewAnglesTarget.Yaw, actor->ViewAnglesDelta.Yaw);
-		processAngle(actor->ViewAngles.Pitch, actor->ViewAnglesTarget.Pitch, actor->ViewAnglesDelta.Pitch);
-		processAngle(actor->ViewAngles.Roll, actor->ViewAnglesTarget.Roll, actor->ViewAnglesDelta.Roll);
+		processAngle(actor->Angles.Yaw, actor->AnglesTarget.Yaw, actor->AnglesDelta.Yaw, LocalViewAngle);
+		processAngle(actor->Angles.Pitch, actor->AnglesTarget.Pitch, actor->AnglesDelta.Pitch, LocalViewPitch);
+		processAngle(actor->Angles.Roll, actor->AnglesTarget.Roll, actor->AnglesDelta.Roll, 0);
+		processAngle(actor->ViewAngles.Yaw, actor->ViewAnglesTarget.Yaw, actor->ViewAnglesDelta.Yaw, 0);
+		processAngle(actor->ViewAngles.Pitch, actor->ViewAnglesTarget.Pitch, actor->ViewAnglesDelta.Pitch, 0);
+		processAngle(actor->ViewAngles.Roll, actor->ViewAnglesTarget.Roll, actor->ViewAnglesDelta.Roll, 0);
 	}
 }
 
