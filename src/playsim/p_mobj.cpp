@@ -3395,7 +3395,8 @@ static inline void P_ProcessAngleChange(player_t* player, AActor* actor, DAngle&
 			}
 			else
 			{
-				target = change;
+				if (target == AngleToFloat(1)) target = angle;
+				target = deltaangle(angle, target) + angle + deltaangle(angle, change);
 				delta = deltaangle(angle, target);
 			}
 		}

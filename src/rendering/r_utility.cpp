@@ -777,7 +777,8 @@ static void R_DoActorTickerAngleChanges(player_t *player, AActor *actor, double 
 				if ((delta > 0 && current > target) || (delta < 0 && current < target))
 				{
 					current = target;
-					target = delta = 0.;
+					target = AngleToFloat(1);
+					delta = 0.;
 				}
 			}
 		};
