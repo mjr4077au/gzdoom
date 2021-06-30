@@ -540,8 +540,8 @@ void R_InterpolateView (FRenderViewpoint &viewpoint, player_t *player, double Fr
 		iview->New.Pos.X == viewpoint.camera->X() &&
 		iview->New.Pos.Y == viewpoint.camera->Y())
 	{
-		viewpoint.Angles.Yaw = (nviewangle + AngleToFloat(LocalViewAngle & 0xFFFF0000)).Normalized180();
-		DAngle delta = player->centering ? DAngle(0.) : AngleToFloat(int(LocalViewPitch & 0xFFFF0000));
+		viewpoint.Angles.Yaw = (nviewangle + player->mo->AnglesTarget.Yaw != AngleToFloat(1) ? DAngle(0.) : AngleToFloat(LocalViewAngle & 0xFFFF0000)).Normalized180();
+		DAngle delta = player->centering || player->mo->AnglesTarget.Pitch != AngleToFloat(1) ? DAngle(0.) : AngleToFloat(int(LocalViewPitch & 0xFFFF0000));
 		viewpoint.Angles.Pitch = clamp<DAngle>((iview->New.Angles.Pitch - delta).Normalized180(), player->MinPitch, player->MaxPitch);
 		viewpoint.Angles.Roll = iview->New.Angles.Roll.Normalized180();
 	}
